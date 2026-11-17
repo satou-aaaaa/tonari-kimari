@@ -289,6 +289,9 @@ try {
       await z.evaluate(() => { const s = JSON.parse(localStorage.getItem("tnr-v1")) || { v: 1 }; s.v = 1; s.ebest = { toString: null }; s.dex = { e: { toString: null } }; localStorage.setItem("tnr-v1", JSON.stringify(s)); });
       await z.reload(); await z.waitForTimeout(200);
       check("数の所に toString の無い物が入っても、0にしてホームが出る（CodeRabbit risoku-jogen#1）", await z.locator("#go-d").count() === 1 && await z.evaluate(() => { const s = __nm.load(); return s.ebest === 0 && s.dex.e === 0; }));
+      await z.evaluate(() => { const s = JSON.parse(localStorage.getItem("tnr-v1")) || { v: 1 }; s.v = 1; const d = __nm.todayKey(); s.runs = { d: { mode: "d", id: { toString: null }, date: d, list: __nm.G.dailyTags(d), res: [] } }; localStorage.setItem("tnr-v1", JSON.stringify(s)); });
+      await z.reload(); await z.waitForTimeout(200);
+      check("途中の回の id が文字でなければ、その回は捨てる（「続きから」で止まらない。CodeRabbit tonari-kimari#1）", await z.locator("#go-d").count() === 1 && await z.evaluate(() => !__nm.load().runs.d));
       // 別のタブで終えたまま記録していない上級の回は、次の回を始める前に記録する
       await z.evaluate(() => { const s = __nm.load(), y = "2026-11-06", G = __nm.G; s.runs.h = { mode: "h", date: y, list: G.hardTags(y), res: [{ m: 0 }, { m: 0 }, { m: 0 }], cur: null, id: "old" }; localStorage.setItem("tnr-v1", JSON.stringify(s)); });
       await z.reload(); await z.waitForTimeout(200); await z.evaluate(() => __nm.start("h"));
@@ -521,7 +524,7 @@ try {
 // 深さの部品（shared-workflows template/qa/depth-check.mjs）
 { const e = await checkDepth(readFileSync(path.join(root, "depth.js"), "utf8")); check("depth.js（自信をかける・復習）の動き", e.length === 0, e.join(" / ")); }
 // 2段目の決まり：どの種類にもある（5つのどれか）
-{ const q = await newPage(); await closeHow(q);
+{ let q; try { q = await newPage(); await closeHow(q);
   check("保存に失敗したら、保存できるまで帯（#savewarn）で知らせ続け、保存できたら消す", await q.evaluate(async () => { const orig = Storage.prototype.setItem; Storage.prototype.setItem = function () { throw new Error("full"); }; __nm.save(() => {}); __nm.save(() => {}); const one = document.querySelectorAll("#savewarn").length === 1 && document.getElementById("savewarn").textContent.includes("保存できませんでした"); await new Promise((r) => setTimeout(r, 1500)); const stay = !!document.getElementById("savewarn"); Storage.prototype.setItem = orig; __nm.save(() => {}); return one && stay && !document.getElementById("savewarn"); }));
   await q.evaluate(() => __nm.start("e")); await q.waitForTimeout(100);
   await q.click(`.ch[data-j="${await ansIdx(q)}"]`); await why(q); await q.waitForSelector(".verdict");
@@ -536,11 +539,11 @@ try {
     const back = await q.evaluate(() => { const r = __nm.load().runs.e; return r ? r.id : null; });
     await q.evaluate(() => { Storage.prototype.setItem = window.__origSet; __nm.save(() => {}); });
     check("保存に失敗したまま「ここで降りる」を押しても、終えた回が「とことんの続き」に戻らない", back === null && (await q.evaluate(() => __nm.load().runs.e)) === null, `${eid} → ${back}`); }
-  await q.close(); }
-{ const q = await newPage(); await closeHow(q);
+} catch (e) { check("追加の画面検査が最後まで動く", false, e.message.split("\n")[0]); } finally { if (q) await q.close().catch(() => {}); } }
+{ let q; try { q = await newPage(); await closeHow(q);
   await q.evaluate(() => { localStorage.setItem("tnr-v1", JSON.stringify({ v: 1, tut: true, days: {}, hdays: {}, adays: {}, dex: { constructor: 1, toString: 2, edane: 1 }, runs: {}, kofi: {}, ach: {}, ebest: 0 })); }); await q.reload(); await q.waitForTimeout(150);
   check("記録に constructor などの鍵が入っても、しくみ帳と実績の種類に数えない（CodeRabbit funka-level#1）", (await q.textContent("#go-dex")).includes("1/22") && await q.evaluate(() => __nm.tally(__nm.load()).kinds) === 1, await q.textContent("#go-dex"));
-  await q.close(); }
+} catch (e) { check("追加の画面検査が最後まで動く", false, e.message.split("\n")[0]); } finally { if (q) await q.close().catch(() => {}); } }
 { const bad = G.KINDS.filter((k) => { for (let i = 0; i < 200; i++) if (!G.GROUPS[G.make(`${k.id}|g${i}`).grp]) return true; return false; }).map((k) => k.id), used = new Set(G.KINDS.map((k) => k.grp));
   check("2段目「これは、どの決まり？」：どの種類の問題も5つ（枝と根・境界線からはなす・境界標と塀・通る・使う・水の流れ）のどれかで、5つとも使う", bad.length === 0 && used.size === 5, bad.join(",")); }
 // 引き継ぎコード（shared-workflows template/qa/transfer-check.mjs）
