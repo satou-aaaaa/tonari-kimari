@@ -285,6 +285,10 @@ try {
       await z.reload(); await z.waitForTimeout(200);
       const r = await z.evaluate(() => __nm.load().runs);
       check("知らない mode の途中経過は捨て、ホームが出る", !("d" in r) && !("h" in r) && await z.locator("#go-d").count() === 1);
+      // 数の所に toString の無い物が入っても止まらない（引き継ぎコードで入りうる。CodeRabbit risoku-jogen#1）
+      await z.evaluate(() => { const s = JSON.parse(localStorage.getItem("tnr-v1")) || { v: 1 }; s.v = 1; s.ebest = { toString: null }; s.dex = { e: { toString: null } }; localStorage.setItem("tnr-v1", JSON.stringify(s)); });
+      await z.reload(); await z.waitForTimeout(200);
+      check("数の所に toString の無い物が入っても、0にしてホームが出る（CodeRabbit risoku-jogen#1）", await z.locator("#go-d").count() === 1 && await z.evaluate(() => { const s = __nm.load(); return s.ebest === 0 && s.dex.e === 0; }));
       // 別のタブで終えたまま記録していない上級の回は、次の回を始める前に記録する
       await z.evaluate(() => { const s = __nm.load(), y = "2026-11-06", G = __nm.G; s.runs.h = { mode: "h", date: y, list: G.hardTags(y), res: [{ m: 0 }, { m: 0 }, { m: 0 }], cur: null, id: "old" }; localStorage.setItem("tnr-v1", JSON.stringify(s)); });
       await z.reload(); await z.waitForTimeout(200); await z.evaluate(() => __nm.start("h"));
